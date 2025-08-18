@@ -1,0 +1,10 @@
+node_modules/
+*.log
+.DS_Store
+.clasprc.json
+.oauth2/
+.secrets/
+# macOS
+Icon?
+# VSCode
+.vscode/

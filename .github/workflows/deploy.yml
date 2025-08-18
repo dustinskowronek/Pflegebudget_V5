@@ -1,8 +1,7 @@
 name: Deploy to Google Apps Script
-
 on:
   push:
-    branches: [ Neu ]   # ggf. auf main ändern
+    branches: [ Neu ]
 
 jobs:
   deploy:
@@ -20,12 +19,19 @@ jobs:
       - name: Install clasp
         run: npm i -g @google/clasp
 
-      # Service-Account-JSON aus dem Secret als ~/.clasprc.json ablegen
-      - name: Write service account to clasprc
+      # Write SA JSON from secret to a temp file
+      - name: Write service account (JSON)
         run: |
-          mkdir -p ~
-          printf '%s' '${{ secrets.GCP_SA_KEY }}' > ~/.clasprc.json
+          printf '%s' '${{ secrets.GCP_SA_KEY }}' > "$RUNNER_TEMP/service-account.json"
 
-      # Deploy (nutzt .clasp.json aus dem Repo und src/ als rootDir)
-      - name: Push to Google Apps Script
+      # Create clasp session using the SA credentials (non-interactive)
+      - name: Login clasp (Service Account)
+        run: clasp login --creds "$RUNNER_TEMP/service-account.json"
+
+      # Optional: show which account is active
+      - name: Who am I
+        run: clasp whoami
+
+      # Push src/ to the Apps Script project defined in .clasp.json
+      - name: Push to Apps Script
         run: clasp push --force

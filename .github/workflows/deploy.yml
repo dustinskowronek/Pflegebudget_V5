@@ -1,5 +1,4 @@
 name: Deploy to Google Apps Script
-
 on:
   push:
     branches: [ Neu ]
@@ -19,16 +18,12 @@ jobs:
       - name: Install clasp
         run: npm i -g @google/clasp
 
-      # Service-Account-Creds als Datei schreiben
-      - name: Write service account
+      - name: Write service account (JSON)
         run: |
           echo '${{ secrets.GCP_SA_KEY }}' > $RUNNER_TEMP/service-account.json
 
-      # Login mit Service Account (neue clasp-Version unterstützt --service-account)
-      - name: Login clasp
+      - name: Login clasp (Service Account)
         run: clasp login --creds $RUNNER_TEMP/service-account.json --service-account
 
-      # Pushen (Root ist src/, wegen .clasp.json)
       - name: Push to Apps Script
         run: clasp push
-        working-directory: .

@@ -20,10 +20,15 @@ jobs:
 
       - name: Write service account (JSON)
         run: |
-          echo '${{ secrets.GCP_SA_KEY }}' > $RUNNER_TEMP/service-account.json
+          printf '%s' '${{ secrets.GCP_SA_KEY }}' > "$RUNNER_TEMP/service-account.json"
+
+      # optional: sanity-check – zeigt "service_account", wenn JSON korrekt ist
+      - name: Inspect SA key (optional)
+        run: |
+          node -e "const k=require(process.env.RUNNER_TEMP+'/service-account.json'); console.log('type:', k.type || 'n/a')"
 
       - name: Login clasp (Service Account)
-        run: clasp login --creds $RUNNER_TEMP/service-account.json --service-account
+        run: clasp login --creds "$RUNNER_TEMP/service-account.json" --service-account
 
       - name: Push to Apps Script
         run: clasp push

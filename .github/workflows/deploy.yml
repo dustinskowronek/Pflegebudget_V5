@@ -2,32 +2,33 @@ name: Deploy to Google Apps Script
 
 on:
   push:
-    branches: [Neu]   # ggf. anpassen
+    branches: [ Neu ]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
 
       - name: Install clasp
-        run: npm install -g @google/clasp
+        run: npm i -g @google/clasp
 
-      - name: Restore service account (from BASE64 secret)
+      # Service-Account-Creds als Datei schreiben
+      - name: Write service account
         run: |
-          echo "$GCP_SA_KEY" | base64 -d > /tmp/service-account.json
-        env:
-          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+          echo '${{ secrets.GCP_SA_KEY }}' > $RUNNER_TEMP/service-account.json
 
+      # Login mit Service Account (neue clasp-Version unterstützt --service-account)
       - name: Login clasp
-        run: clasp login --creds /tmp/service-account.json
+        run: clasp login --creds $RUNNER_TEMP/service-account.json --service-account
 
-      - name: Push to Google Apps Script
-        run: clasp push -f
+      # Pushen (Root ist src/, wegen .clasp.json)
+      - name: Push to Apps Script
+        run: clasp push
+        working-directory: .

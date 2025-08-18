@@ -6,7 +6,6 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -19,19 +18,19 @@ jobs:
       - name: Install clasp
         run: npm i -g @google/clasp
 
-      # SA-JSON aus Secret in ~/.clasprc.json „einbetten“
+      # SA-JSON aus Secret in ~/.clasprc.json schreiben
       - name: Write ~/.clasprc.json from SA secret
         run: |
-          sudo apt-get update -y && sudo apt-get install -y jq
-          printf '%s' '${{ secrets.GCP_SA_KEY }}' \
-          | jq -c '{token: ., oauth2ClientSettings:{clientId:"",clientSecret:"",redirectUri:"http://localhost"}, isLocalCreds:true}' \
-          > ~/.clasprc.json
-          echo "Wrote $(wc -c < ~/.clasprc.json) bytes to ~/.clasprc.json"
+          mkdir -p ~
+          printf '%s' '${{ secrets.GCP_SA_KEY }}' > ~/.clasprc.json
+          # kurze Plausibilitäts-Checks (zeigen KEINE Schlüssel)
+          jq -r '.client_email' ~/.clasprc.json | sed 's/@.*$//@…/' || true
+          jq -r 'keys[]' ~/.clasprc.json | head -n 3 || true
 
-      # Optional: zeigt, dass eine Auth vorhanden ist
+      # Optional: zeigt, dass clasp die Creds findet
       - name: Who am I
         run: clasp whoami || true
 
-      # Push nach Apps Script; liest .clasp.json im Repo (scriptId + rootDir)
+      # Push nach Apps Script (liest .clasp.json + ~/.clasprc.json)
       - name: Push to Apps Script
         run: clasp push --force

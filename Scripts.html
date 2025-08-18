@@ -1,0 +1,350 @@
+<script>
+  /* ========== Tabs ========== */
+  (function () {
+    const tabs = document.querySelectorAll('.tab');
+    function activate(id) {
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      const t = document.getElementById('tab-' + id);
+      if (t) t.classList.add('active');
+      tabs.forEach(tab => tab.classList.toggle('active', tab.dataset.tab === id));
+    }
+    tabs.forEach(t => t.addEventListener('click', () => activate(t.dataset.tab)));
+  })();
+
+  /* ========== Dashboard (nur visuell Demo) ========== */
+  (function () {
+    const fmt = v => new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR'}).format(v||0);
+    const elNo  = document.getElementById('listNoBudget');
+    const elMost= document.getElementById('listMostBudget');
+    const subL  = document.getElementById('dashSubtitleLeft');
+    const subR  = document.getElementById('dashSubtitleRight');
+
+    const demo = {
+      "SGB XI 39": {
+        noBudget: [{ name:"Peter Müller" },{ name:"Anna Schmitz" },{ name:"Erik Maler" }],
+        mostBudget: [
+          { name:"Klaus Neumann", amount: 2460.00 },
+          { name:"Lena Hoffmann", amount: 2150.00 },
+          { name:"Sabine Wagner", amount: 1840.00 },
+        ]
+      },
+      "SGB XI 45b": {
+        noBudget: [{ name:"Ute Becker" },{ name:"Karim Öztürk" },{ name:"Brigitte Hofmann" }],
+        mostBudget: [
+          { name:"Mira Lehmann", amount: 172.84 },
+          { name:"Arne Peters", amount: 168.42 },
+          { name:"Kari Schmidt", amount: 160.00 },
+        ]
+      }
+    };
+
+    function render(mode){
+      const d = demo[mode];
+      if (!d) return;
+      subL && (subL.textContent = ' – ' + mode);
+      subR && (subR.textContent = ' – ' + mode);
+      if (elNo)   elNo.innerHTML   = d.noBudget.map(r => `<li><span>${r.name}</span><span class="chip neg">€ 0,00</span></li>`).join('');
+      if (elMost) elMost.innerHTML = d.mostBudget.map(r => `<li><span>${r.name}</span><span class="chip pos">${fmt(r.amount)}</span></li>`).join('');
+    }
+
+    const seg = document.getElementById('dashMode');
+    if (seg) {
+      seg.querySelectorAll('button').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          seg.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          render(btn.dataset.mode);
+        });
+      });
+      render('SGB XI 39');
+    }
+  })();
+
+  /* ========== Budget – Live an Backend ========== */
+  (function () {
+    // Elemente
+    const modeSwitcher = document.getElementById('budgetMode');
+    const selClientInp = document.getElementById('selClient');
+    const clientList   = document.getElementById('clientList');
+    const selYearTable = document.getElementById('selYearTable');
+    const tbodyBudget  = document.getElementById('tblBudget');
+
+    const inpMonth  = document.getElementById('inpMonth');
+    const inpYear   = document.getElementById('inpYear');
+    const inpAmount = document.getElementById('inpAmount');
+    const inpType   = document.getElementById('inpType');
+    const btnBook   = document.getElementById('btnBook');
+
+    // ✨ NEU: Payer-UI
+    const payerHeader  = document.getElementById('payerHeader');
+    const payerWarning = document.getElementById('payerWarning');
+    const payerError   = document.getElementById('payerError');
+
+    // State
+    let currentTopf   = 'SGB XI 39';
+    let currentClient = '';
+    let currentYear   = String(new Date().getFullYear());
+    const months = ['01','02','03','04','05','06','07','08','09','10','11','12'];
+    const years  = [String(new Date().getFullYear()), String(new Date().getFullYear()+1), String(new Date().getFullYear()+2)];
+
+    // Helpers
+    const fmt = (n)=> new Intl.NumberFormat('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2}).format(n||0);
+    const ellipsize = (s, max=15) => {
+      s = String(s||'');
+      return s.length > max ? s.slice(0, max-1) + '…' : s;
+    };
+
+    function fillMonthsYears() {
+      if (inpMonth)  inpMonth.innerHTML = months.map(m=>`<option>${m}</option>`).join('');
+      if (inpYear)   inpYear.innerHTML  = years.map(y=>`<option>${y}</option>`).join('');
+      if (selYearTable) {
+        selYearTable.innerHTML = years.map(y=>`<option>${y}</option>`).join('');
+        selYearTable.value = currentYear;
+      }
+    }
+
+    // ▼ Buchungsarten je Topf
+    function renderTypeOptions() {
+      if (!inpType) return;
+      let opts = [];
+      if (currentTopf === 'SGB XI 39') {
+        opts = [
+          {v:'Buchung', label:'Buchung'},
+          {v:'Folgeanlage', label:'Folgeanlage'}
+        ];
+      } else if (currentTopf === 'SGB XI 45b') {
+        opts = [{v:'Buchung', label:'Buchung'}];
+      } else if (currentTopf === 'SGB XI 45a') {
+        opts = [
+          {v:'Buchung', label:'Buchung'},
+          {v:'Konfiguration', label:'Konfiguration Limit 45a'}
+        ];
+      }
+      inpType.innerHTML = opts.map(o => `<option value="${o.v}">${o.label}</option>`).join('');
+    }
+
+    function setLoading(isLoading) {
+      if (!tbodyBudget) return;
+      tbodyBudget.innerHTML = isLoading ? `<tr><td colspan="5">Lade Daten …</td></tr>` : '';
+      // Hinweise resetten
+      if (payerWarning) payerWarning.style.display = 'none';
+      if (payerError)   payerError.style.display   = 'none';
+    }
+
+    // ✨ Spaltentitel „Rechnung an …“ setzen
+    function setInvoiceHeader(label) {
+      const txt = label ? `Rechnung an ${ellipsize(label, 15)}`
+                        : 'Rechnung an [Kasse]';
+      if (payerHeader) {
+        payerHeader.textContent = txt;
+        payerHeader.title = label || '[Kasse]';
+      }
+    }
+
+    // ✨ Warn-/Fehlermeldungen anzeigen
+    function showPayerAlerts(vm) {
+      if (!vm) return;
+      if (payerWarning) {
+        if (vm.warning) {
+          payerWarning.textContent = vm.warning;
+          payerWarning.style.display = '';
+        } else {
+          payerWarning.style.display = 'none';
+        }
+      }
+      if (payerError) {
+        if (vm.error) {
+          payerError.textContent = vm.error;
+          payerError.style.display = '';
+        } else {
+          payerError.style.display = 'none';
+        }
+      }
+    }
+
+    function renderVM(vm) {
+      if (!vm || !Array.isArray(vm.rows)) {
+        setLoading(false);
+        tbodyBudget.innerHTML = `<tr><td colspan="5">Keine Daten</td></tr>`;
+        setInvoiceHeader('');
+        showPayerAlerts(null);
+        return;
+      }
+      currentClient = vm.client || currentClient;
+      currentTopf   = vm.topf   || currentTopf;
+      currentYear   = vm.year   || currentYear;
+      if (selClientInp && !selClientInp.value) selClientInp.value = currentClient;
+
+      // Kopf & Hinweise aus Backend
+      setInvoiceHeader(vm.payerLabel || '');
+      showPayerAlerts(vm);
+
+      tbodyBudget.innerHTML = vm.rows.map(r => `
+        <tr>
+          <td>${r.mon}</td>
+          <td>${fmt(r.start)}</td>
+          <td>${fmt(r.invoice)}</td>
+          <td>${fmt(r.carry)}</td>
+          <td>${fmt(r.copay)}</td>
+        </tr>
+      `).join('');
+    }
+
+    function loadVM() {
+      if (!currentClient) return;
+      setLoading(true);
+      google.script.run
+        .withSuccessHandler(renderVM)
+        .withFailureHandler(err => {
+          setLoading(false);
+          tbodyBudget.innerHTML = `<tr><td colspan="5">Fehler: ${err.message || err}</td></tr>`;
+          setInvoiceHeader('');
+          showPayerAlerts({ warning:'', error:String(err && err.message ? err.message : err) });
+        })
+        .getBudgetVM({ client: currentClient, topf: currentTopf, year: currentYear });
+    }
+
+    // ===== Dashboard – Meldungen (alphabetisch sortierbar) =====
+    (function () {
+      const body   = document.getElementById('dashMsgsBody');
+      const sortUi = document.getElementById('dashMsgSort');
+      let sortDir = 'asc'; // 'asc'|'desc'
+      let allMsgs = [];    // [{client,text}, …]
+
+      const ell = (s, n=120) => {
+        s = String(s||''); return s.length>n ? s.slice(0,n-1)+'…' : s;
+      };
+
+      function render() {
+        if (!body) return;
+        if (!allMsgs.length) {
+          body.innerHTML = `<tr><td colspan="2">Keine Meldungen.</td></tr>`;
+          return;
+        }
+        const sorted = [...allMsgs].sort((a,b)=>{
+          const x = (a.client||'').localeCompare(b.client||'', 'de', {sensitivity:'base'});
+          return sortDir === 'asc' ? x : -x;
+        });
+        body.innerHTML = sorted.map(r => `
+          <tr>
+            <td>${r.client || ''}</td>
+            <td title="${(r.text||'').replace(/"/g,'&quot;')}">${ell(r.text)}</td>
+          </tr>
+        `).join('');
+      }
+
+      function loadAll() {
+        if (!body) return;
+        body.innerHTML = `<tr><td colspan="2">Lade Meldungen …</td></tr>`;
+        allMsgs = [];
+
+        // 1) alle Klienten holen
+        google.script.run.withSuccessHandler(list => {
+          if (!Array.isArray(list) || !list.length) { allMsgs=[]; render(); return; }
+
+          // pro Klient beide Töpfe prüfen (39 & 45b)
+          const topfs = ['SGB XI 39', 'SGB XI 45b'];
+          const year  = String(new Date().getFullYear());
+          let pending = list.length * topfs.length;
+
+          list.forEach(name => {
+            topfs.forEach(topf => {
+              google.script.run
+                .withSuccessHandler(vm => {
+                  if (vm && (vm.error || vm.warning)) {
+                    allMsgs.push({ client: name, text: (vm.error || vm.warning) });
+                  }
+                  if (--pending === 0) render();
+                })
+                .withFailureHandler(() => {
+                  if (--pending === 0) render();
+                })
+                .getBudgetVM({ client: name, topf, year });
+            });
+          });
+        }).listClients();
+      }
+
+      if (sortUi) {
+        sortUi.querySelectorAll('button').forEach(btn=>{
+          btn.addEventListener('click', ()=>{
+            sortUi.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+            btn.classList.add('active');
+            sortDir = btn.dataset.sort === 'desc' ? 'desc' : 'asc';
+            render();
+          });
+        });
+      }
+
+      // initial laden
+      loadAll();
+    })();
+
+    // Events
+    if (modeSwitcher) {
+      modeSwitcher.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', () => {
+          modeSwitcher.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentTopf = btn.dataset.mode;
+          renderTypeOptions();
+          loadVM();
+        });
+      });
+    }
+    if (selClientInp) {
+      selClientInp.addEventListener('change', () => {
+        currentClient = selClientInp.value;
+        loadVM();
+      });
+    }
+    if (selYearTable) {
+      selYearTable.addEventListener('change', () => {
+        currentYear = selYearTable.value;
+        loadVM();
+      });
+    }
+    if (btnBook) {
+      btnBook.addEventListener('click', () => {
+        const m = (inpMonth && inpMonth.value) || '';
+        const y = (inpYear && inpYear.value)   || currentYear;
+        let amt = (inpAmount && inpAmount.value) ? String(inpAmount.value).replace(',','.') : '';
+        const amount = Number(amt);
+        const kind = inpType ? String(inpType.value) : 'Buchung';
+
+        if (!currentClient) return alert('Bitte Klient:in auswählen.');
+        if (!m || !y)       return alert('Bitte Leistungsmonat und Jahr wählen.');
+        if (kind !== 'Konfiguration' && (!amount || isNaN(amount))) {
+          return alert('Bitte einen gültigen Betrag eingeben.');
+        }
+
+        btnBook.disabled = true;
+        google.script.run
+          .withSuccessHandler(() => {
+            btnBook.disabled = false;
+            if (inpAmount) inpAmount.value='';
+            loadVM();
+          })
+          .withFailureHandler(err => { btnBook.disabled = false; alert('Fehler beim Buchen: ' + (err.message || err)); })
+          .postManualBooking({ client: currentClient, month: m, year: y, amount: amount, art: currentTopf, kind });
+      });
+    }
+
+    // Init
+    fillMonthsYears();
+    renderTypeOptions();
+    loadVM();     // lädt beim ersten Start, nachdem selClient gesetzt wird
+    // Klientenliste laden (setzt currentClient, triggert loadVM erneut)
+    google.script.run
+      .withSuccessHandler(list => {
+        if (!clientList) return;
+        clientList.innerHTML = (list||[]).map(n=>`<option value="${n}">`).join('');
+        if (!selClientInp.value && list && list.length) {
+          selClientInp.value = list[0];
+          currentClient = list[0];
+          loadVM();
+        }
+      })
+      .listClients();
+  })();
+</script>

@@ -1,0 +1,51 @@
+<div class="panel active" id="tab-dashboard">
+  <div class="card" style="margin-top:12px;">
+    <div class="title">
+      <div>Pflegebudget – Übersicht</div>
+      <div class="segmented" id="dashMode">
+        <button type="button" data-mode="SGB XI 39" class="active">SGB XI 39</button>
+        <button type="button" data-mode="SGB XI 45b">SGB XI 45b</button>
+      </div>
+    </div>
+    <div class="body">
+      <div class="dash-grid">
+        <div class="card">
+          <div class="title">Klienten ohne Budget<span class="subtle" id="dashSubtitleLeft"></span></div>
+          <div class="body">
+            <ul class="list" id="listNoBudget"></ul>
+          </div>
+        </div>
+        <div class="card">
+          <div class="title">Größter Budgetrest<span class="subtle" id="dashSubtitleRight"></span></div>
+          <div class="body">
+            <ul class="list" id="listMostBudget"></ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ✅ NEU: Meldungen-Karte (ohne Budget-Filter, mit Alphabet-Sortierung) -->
+  <div class="card" style="margin-top:12px;">
+    <div class="title" style="display:flex;align-items:center;gap:12px;">
+      <div style="flex:1;">Meldungen</div>
+      <div class="segmented" id="dashMsgSort">
+        <button type="button" data-sort="asc" class="active">A → Z</button>
+        <button type="button" data-sort="desc">Z → A</button>
+      </div>
+    </div>
+    <div class="body">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:220px;">Klient:in</th>
+            <th>Meldung</th>
+          </tr>
+        </thead>
+        <tbody id="dashMsgsBody">
+          <tr><td colspan="2">Lade Meldungen …</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

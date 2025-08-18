@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <?!= include('Styles'); ?>
+</head>
+<body>
+  <div class="shell">
+    <!-- Tabs -->
+    <div class="tabs">
+      <div class="brand">Pflegebudget</div>
+      <div class="tab active" data-tab="dashboard">Dashboard</div>
+      <div class="tab" data-tab="budget">Budget</div>
+      <div class="tab" data-tab="report">Berichte</div>
+      <div class="tab" data-tab="settings">Einstellungen</div>
+    </div>
+
+    <!-- Panels -->
+    <?!= include('Dashboard'); ?>
+    <?!= include('Budget'); ?>
+    <?!= include('Report'); ?>
+    <?!= include('Settings'); ?>
+  </div>
+
+  <?!= include('Scripts'); ?>
+</body>
+</html>

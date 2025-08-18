@@ -1,0 +1,83 @@
+<div class="panel" id="tab-budget">
+
+  <!-- Budget-Kopf mit Klient:innen-Auswahl + Topf-Schalter -->
+  <div class="card" style="margin-top:12px;">
+    <div class="title">
+      <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;flex:1;">
+        <div>Budget</div>
+        <div style="flex:1 1 240px;">
+          <label for="selClient" style="font-size:12px;opacity:.8;">Klient:in auswählen</label>
+          <input id="selClient" list="clientList" placeholder="Name suchen..." />
+          <datalist id="clientList"></datalist>
+        </div>
+      </div>
+      <div class="segmented" id="budgetMode">
+        <button type="button" data-mode="SGB XI 39" class="active">SGB XI 39</button>
+        <button type="button" data-mode="SGB XI 45a">SGB XI 45a</button>
+        <button type="button" data-mode="SGB XI 45b">SGB XI 45b</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Manuelle Buchung -->
+  <div class="card" style="margin-top:10px;">
+    <div class="title">Manuelle Buchung</div>
+    <div class="body">
+      <div class="row">
+        <div style="flex:1 1 140px;">
+          <label>Leistungsmonat:</label>
+          <select id="inpMonth"></select>
+        </div>
+
+        <div style="flex:1 1 120px;">
+          <label>Jahr:</label>
+          <select id="inpYear"></select>
+        </div>
+
+        <div style="flex:1 1 220px;">
+          <label>Buchungsart:</label>
+          <select id="inpType"></select>
+        </div>
+
+        <div style="flex:1 1 160px;">
+          <label>Betrag (€):</label>
+          <input id="inpAmount" type="text" placeholder="z. B. 150,00">
+        </div>
+
+        <div style="align-self:flex-end;">
+          <button class="btn" id="btnBook">Buchen</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Budget-Tabelle -->
+  <div class="card" style="margin-top:14px;">
+    <div class="body">
+      <div class="row" style="margin-bottom:8px;">
+        <div style="flex:1 1 180px;">
+          <label>Jahr auswählen:</label>
+          <select id="selYearTable"></select>
+        </div>
+      </div>
+
+      <!-- Hinweisfelder für Warnungen/Fehler -->
+      <div id="payerWarning" class="subtle" style="color:#b58900;margin-bottom:6px;display:none;"></div>
+      <div id="payerError"   class="subtle" style="color:#dc322f;margin-bottom:6px;display:none;"></div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Monat</th>
+            <th>Budget Monatsanfang</th>
+            <th id="payerHeader">Rechnung an [Kasse]</th>
+            <th>Budgetübertrag</th>
+            <th>Private Zuzahlung</th>
+          </tr>
+        </thead>
+        <tbody id="tblBudget"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>

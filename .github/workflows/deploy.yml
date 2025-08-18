@@ -19,19 +19,19 @@ jobs:
       - name: Install clasp
         run: npm i -g @google/clasp
 
-      # Write SA JSON from secret to a temp file
-      - name: Write service account (JSON)
+      # SA-JSON aus Secret in ~/.clasprc.json „einbetten“
+      - name: Write ~/.clasprc.json from SA secret
         run: |
-          printf '%s' '${{ secrets.GCP_SA_KEY }}' > "$RUNNER_TEMP/service-account.json"
+          sudo apt-get update -y && sudo apt-get install -y jq
+          printf '%s' '${{ secrets.GCP_SA_KEY }}' \
+          | jq -c '{token: ., oauth2ClientSettings:{clientId:"",clientSecret:"",redirectUri:"http://localhost"}, isLocalCreds:true}' \
+          > ~/.clasprc.json
+          echo "Wrote $(wc -c < ~/.clasprc.json) bytes to ~/.clasprc.json"
 
-      # Create clasp session using the SA credentials (non-interactive)
-      - name: Login clasp (Service Account)
-        run: clasp login --creds "$RUNNER_TEMP/service-account.json"
-
-      # Optional: show which account is active
+      # Optional: zeigt, dass eine Auth vorhanden ist
       - name: Who am I
-        run: clasp whoami
+        run: clasp whoami || true
 
-      # Push src/ to the Apps Script project defined in .clasp.json
+      # Push nach Apps Script; liest .clasp.json im Repo (scriptId + rootDir)
       - name: Push to Apps Script
         run: clasp push --force

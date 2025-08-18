@@ -2,7 +2,7 @@ name: Deploy to Google Apps Script
 
 on:
   push:
-    branches: [ Neu ]
+    branches: [ Neu ]   # ggf. auf main ändern
 
 jobs:
   deploy:
@@ -20,19 +20,12 @@ jobs:
       - name: Install clasp
         run: npm i -g @google/clasp
 
-      # SA-JSON aus dem Secret schreiben (ohne kaputte Zeilenumbrüche)
-      - name: Write service account (JSON)
+      # Service-Account-JSON aus dem Secret als ~/.clasprc.json ablegen
+      - name: Write service account to clasprc
         run: |
-          printf '%s' '${{ secrets.GCP_SA_KEY }}' > "$RUNNER_TEMP/service-account.json"
+          mkdir -p ~
+          printf '%s' '${{ secrets.GCP_SA_KEY }}' > ~/.clasprc.json
 
-      # Mit Service Account einloggen
-      - name: Login clasp (Service Account)
-        run: clasp login --creds "$RUNNER_TEMP/service-account.json" --service-account
-
-      # WICHTIG: creds an die Stelle kopieren, wo clasp sie beim Push erwartet
-      - name: Copy creds to clasprc
-        run: cp "$RUNNER_TEMP/service-account.json" ~/.clasprc.json
-
-      # Deploy ausführen (nutzt .clasp.json im Repo-Root; rootDir=src)
+      # Deploy (nutzt .clasp.json aus dem Repo und src/ als rootDir)
       - name: Push to Google Apps Script
-        run: clasp push
+        run: clasp push --force
